@@ -7,7 +7,6 @@ function [recover_signal,diff1, diff2] = CurveFitRecover(sin_signal,flip_idx,ind
     end
     diff1 = [];
     diff2 = [];
-    unwrapY = unwrap(angle(recover_signal));
 
     last_diff = 1 + 0j;
     move_rate = 3e8 / 902e6;
@@ -67,9 +66,9 @@ function [recover_signal,diff1, diff2] = CurveFitRecover(sin_signal,flip_idx,ind
 %         if i > 9
 %             figure;
 %             set(0,'defaultfigurecolor','w');
-%             plot(unwrap(angle(recover_signal(chirp_samples * (i - 9) + 1 : chirp_samples * i))));
-%             xlabel('sample dot');
-%             ylabel('phase');
+%             plot(unwrap(angle(recover_signal(chirp_samples * (i - 8) + 1 : chirp_samples * i))));
+%             xlabel('时间/采样点序列', 'FontSize',14);
+%             ylabel('相位/弧度', 'FontSize',14);
 %         end
 
         chirp_recover = recover_signal(chirp_samples * (i - 1) + 1 : chirp_samples * i);
@@ -115,5 +114,6 @@ function [recover_signal,diff1, diff2] = CurveFitRecover(sin_signal,flip_idx,ind
         
         last_diff = diff1(end);
     end
+     
 end
 

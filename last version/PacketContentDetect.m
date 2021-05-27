@@ -7,7 +7,18 @@ up_chirp = chirp(0:1/sample_rate:chirp_duration - 1/sample_rate, -BW/2, chirp_du
 featureChirp =[repmat(up_chirp,1,2),repmat(down_chirp,1,2), down_chirp(1:chirp_samples/4)];
 
 %% 手动修正CFO
+
+% [corr_result, lag] = xcorr(raw_data_complex, featureChirp);
+% corr_result = corr_result / length(featureChirp);
+% [~,I] = max(abs(corr_result));
+% CFO_detect_idx = lag(I) - 2 * chirp_samples;
+% data_phase = unwrap(angle(raw_data_complex));
+% CFO_rate = (data_phase(CFO_detect_idx + 2 * chirp_samples) - data_phase(CFO_detect_idx)) / 2 / chirp_samples;
+
 CFO_rate = 0.074992954799107;
+
+% CFO_rate = 0.077;
+
 data = raw_data_complex .*  exp(-1j * (1:length(raw_data_complex)) * CFO_rate);
 
 featureChirp =[repmat(up_chirp,1,2),repmat(down_chirp,1,2), down_chirp(1:chirp_samples/4)];
@@ -15,26 +26,26 @@ featureChirp =[repmat(up_chirp,1,2),repmat(down_chirp,1,2), down_chirp(1:chirp_s
 [corr_result, lag] = xcorr(data, featureChirp);
 
 corr_result = corr_result / length(featureChirp);
-figure;
-plot(abs(corr_result));
+
 position = [];
 
-corr_threshold = 0.01;
-abs_threshold = 0.02;
+corr_threshold = 0.05;
+abs_threshold = 0.1;
 i = length(data) + 1 + 12.25 * chirp_samples - length(featureChirp);
 pkt_start_compensate = 8 * chirp_samples;
 guard = 300;
+
 while (i <= length(corr_result) -  pkt_size * chirp_samples)
-    if abs(corr_result(i)) < corr_threshold  || abs(data(lag(i) - 1 - pkt_start_compensate + guard)) < abs_threshold || abs(data(lag(i) - 1 - pkt_start_compensate + pkt_size * chirp_samples - guard)) < abs_threshold
-        i = i + 1;
-        continue;
-    end
-    if min(abs(data(lag(i) - 1 - pkt_start_compensate + guard:lag(i) - 1 - pkt_start_compensate + pkt_size * chirp_samples - guard))) < abs_threshold / 2
-        i = i + 1;
-        continue;
-    end
     [M,I] = max(abs(corr_result(i: i + guard * 2)));
     if I == 1
+        if abs(corr_result(i)) < corr_threshold  || abs(data(lag(i) - 1 - pkt_start_compensate + guard)) < abs_threshold || abs(data(lag(i) - 1 - pkt_start_compensate + pkt_size * chirp_samples - guard)) < abs_threshold
+            i = i + 1;
+            continue;
+        end
+        if min(abs(data(lag(i) - 1 - pkt_start_compensate + guard:lag(i) - 1 - pkt_start_compensate + pkt_size * chirp_samples - guard))) < abs_threshold / 2
+            i = i + 1;
+            continue;
+        end
         position = [position (lag(i) - pkt_start_compensate)];
         i = i + pkt_size * chirp_samples - 1;
     else
@@ -61,7 +72,6 @@ for i = 1 : length(position)
     for j = 1:3
         temp = abs(fft(data(position(i) + chirp_samples + offset(j): position(i) + chirp_samples * 2 - 1 + offset(j)).* down_chirp)); 
         m_candidate(j) = temp(1);
-
     end
     [~, idx] = max(m_candidate);
 %     position(i) = position(i) + offset(idx);
@@ -70,7 +80,7 @@ for i = 1 : length(position)
     pkt_conj = [];
     start_chirp = 2;
     for j = start_chirp : 10
-        idx_ls = [idx_ls (pkt_start + (j - 1) * chirp_samples)]; % j从2开始，此处加的点是chirp尾
+        idx_ls = [idx_ls (pkt_start + (j - 1) * chirp_samples)];
 
         y = fft(data(position(i) + (j - 1) * chirp_samples: position(i) + j * chirp_samples - 1).* down_chirp);
         [M,idx] = max(abs(y));
@@ -91,7 +101,24 @@ for i = 1 : length(position)
     sin_signal = [sin_signal data(position(i) + chirp_samples:position(i) + 12 * chirp_samples - 1).*pkt_conj];
     index_ls = [index_ls ((position(i)+chirp_samples):chirp_samples:(position(i) + 12 * chirp_samples - 1))];
     idx_ls = [idx_ls (pkt_start + (11 - 1) * chirp_samples) (pkt_start + (12 - 1) * chirp_samples)];
+    
+%     figure;
+%     plot(unwrap(angle(data(position(i) + chirp_samples:position(i) + 12 * chirp_samples - 1).*pkt_conj)));
+%     set(0,'defaultfigurecolor','w');
+%     xlabel('时间/采样点序列', 'FontSize',14);
+%     ylabel('相位/弧度', 'FontSize',14);
+%     
+%     dechirp = data(position(i) + chirp_samples:position(i) + 12 * chirp_samples - 1).*pkt_conj;
+    
+%     figure;
+%     Y = abs(fft(dechirp(1:chirp_samples)));
+%     plot(Y())
+%     set(0,'defaultfigurecolor','w');
+%     xlabel('FFT/bin', 'FontSize',14);
+%     ylabel('频率/Hz', 'FontSize',14);
+    
     pkt_conj = [];
+    
     for j = 1 : pkt_size - 12.25
         idx_ls = [idx_ls (pkt_start + (12 + j - 1) * chirp_samples)]; % 此处加的点是chirp尾
 

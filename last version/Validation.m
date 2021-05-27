@@ -38,8 +38,7 @@ for i = 1:length(s)
     end
 end
 
-for i = 1:length(cach_u)
-   scatter(cach_u(1:i), cach_v(1:i));
-   set(0,'defaultfigurecolor','w');
-   pause(0.04);
-end
+set(0,'defaultfigurecolor','w');
+scatter(cach_u, cach_v);
+xlabel('x方向坐标/m');
+ylabel('y方向坐标/m');
